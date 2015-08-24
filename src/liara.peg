@@ -1,0 +1,185 @@
+Liara:
+	
+	# Text parsed by Liara is a set of Blocks.
+	# Block is some content, sometimes just a Paragraph.
+	# Sometimes one or more Blocks are wrapped into blockquotes or block cuts.
+	# Paragraph contains one or more Lines, and each of Lines contains Inline elements.
+	# Line can also contain inline cut tags, which are not neccessarily even.
+	
+	Text <- :Break? Block+ !.
+	Block <{prepare_Block} EmptyCut? BeginCut? QuotationMark*
+		( Ruler / Heading / Pre / CustomBlock / BlockImage / Paragraph ) :Break? EndCut?
+	Paragraph <- Line (NewLine Line)*
+	Line <- (!NewLine Inline)+
+	Inline <- NoFormat / EmptyCut / BeginCut / EndCut / AutoUrl / Link / Bold / Italic / Code / Del / PlainChar
+	
+	
+	
+	###################################################
+	# Basic elements
+	###################################################
+	
+	PlainChar <~ Space / BasicChar
+	BasicChar <~ !NewLine !Space .
+	NewLine <- "\r" "\n" / "\n" / "\r"
+	Space <~ " " / "\t"
+	Break <~ Space* NewLine Space* (NewLine Space*)+ / !.
+	Word <~ (!Space !NewLine .)+
+	Arg <~ NonQuotedArg / QuotedArg
+	NonQuotedArg <~ (!Space !NewLine !"\"" .)+ :Space?
+	QuotedArg <~ :"\"" (!NewLine !"\"" .)+ :"\"" :Space?
+	Number <~ [0-9]+
+	Username <~ [A-z0-9_\-]+ !Username
+	QuotationMark <~ ">" " "*
+	Url <~ ("http://" / "https://") BasicChar+
+	
+	
+	
+	###################################################
+	# Text formatting
+	###################################################
+	
+	Bold     <- :"**" (!"**" Inline)+ :"**"
+	Italic   <- :"__" (!"__" Inline)+ :"__"
+	Del      <- :"~~" (!"~~" Inline)+ :"~~"
+	Code     <- :"`"  (!"`"  Inline)+ :"`"
+	NoFormat <~ :"[no]" (!"[/no]" PlainChar)+ :"[/no]"
+	
+	
+	
+	###################################################
+	# Links
+	###################################################
+	
+	## AutoUrl
+	# This is the simplest link ever: just an URL inside text.
+	# It starts with "http://" or "https://" and ends with a space
+	# or with a punctuation character followed by a space.
+	
+	AutoUrl <~ ("http://" / "https://") (!Space !(("." / "," / ")" / "!" / "?" / ":" / ";") (Space / !.)) Inline)+
+	
+	
+	## Link
+	# This may be any URL or even non-URL, following by an optional label, all inside double brackets.
+	# User-defined function is responsible for converting the first part to URL
+	# and, optionally, modifying label and setting a custom CSS class.
+	#
+	# Examples:
+	#	((http://example.org Some **formatted** text))
+	#	((username/mypost1))
+	#	((mypost1 Link to my old post))
+	
+	Link <- :"((" LinkTarget (:Space+ LinkLabel)? :"))"
+	LinkTarget <~ (!"))" !Space .)*
+	LinkLabel <- (!"))" (Bold / Italic / Code / Del / PlainChar))+
+	
+	
+	
+	###################################################
+	# Headings
+	###################################################
+	
+	# A Heading is a non-formatted line prefixed with 1 to 4 colons.
+	# The colos are saved into "HeadingPrefix", so that code could detect heading level.
+	# More colons means bigger heading: "::::" means <h3>, and ":" means <h6>.
+	# Tags <h1> and <h2> are not supported by Liara.
+	# Heading can also have an anchor which must be placed in brackets right after the colons.
+	#
+	# Examples:
+	#	::::(p2) Part 2
+	#	::: Section 1
+	
+	HeadingPrefix <~ "::::" / ":::" / "::" / ":"
+	HeadingAnchor <~ :"(" (!Space !")" PlainChar)+ :")"
+	Heading <- HeadingPrefix HeadingAnchor? :Space+ ~(PlainChar+)
+	
+	
+	
+	###################################################
+	# Rulers
+	###################################################
+	
+	# A ruler is 4 or more signs "=" or "-" at a separate paragraph.
+	# The exact length does not affect anything.
+	
+	Ruler <- "===" "="+ / "---" "-"+
+	
+	
+	
+	###################################################
+	# Cuts
+	###################################################
+	
+	# A cut begins with "(((CUT)))" or "(((CUT:Custom text)))" and ends with "(((/CUT)))".
+	# There is no difference here between a block cut and an inline cut.
+	# Parser's code will decide later which of cut tags are block and which are inline.
+	# Case of word "CUT" does not matter, i.e. "CUT", "Cut" and "cUt" are equal.
+	
+	CutKeyWord <~ [Cc][Uu][Tt]
+	CutLabel <~ :Space* :":" :Space* (!")))" PlainChar)*
+	BeginCut <{prepare_BeginCut} :"(((" :Space* CutKeyWord CutLabel? :")))" :Break?
+	EndCut <{prepare_EndCut} :Break? :"(((" :Space* :"/" :Space* CutKeyWord :Space* :")))" :Break?
+	
+	# There is one special case — EmptyCut. It is a BeginCut immediately follwed by EndCut.
+	# Such cut won't ever be rendered, so we detect such empty pairs on this step.
+	
+	EmptyCut <: BeginCut EndCut
+	
+	
+	
+	###################################################
+	# Code
+	###################################################
+	
+	# Liara supports Markdown-style code blocks opened and closed with three backquotes.
+	# There can be optional language specification right after opening backquotes.
+	#
+	# Example:
+	#	```python
+	#	print("Hello, world!")
+	#	```
+	
+	Pre <- :"```" ~BasicChar* :NewLine ~(!PreEnd .)* :PreEnd
+	PreEnd <- NewLine "```"
+	
+	
+	
+	###################################################
+	# Custom blocks
+	###################################################
+	
+	# A custom block is a standalone one-line paragraph
+	# containing an ampersand-prefixed plugin name and some arguments for it.
+	# It can be used for embedding media players and other widgets.
+	#
+	# Examples:
+	#	&video https://vimeo.com/59230893
+	#	&music https://www.jamendo.com/en/track/461017/black-wings
+	
+	CustomBlock <- :"&" ~[A-z0-9_\-]+ (:Space+ ~(!Break .)+)? ^Break
+	
+	
+	
+	###################################################
+	# Images
+	###################################################
+	
+	# Image URL should be placed on a separate line
+	# and prefixed with "!" (for normal mode) or "!!" (for «wide» mode).
+	# Since the URL can be relative (or even just a filename), no validation is done.
+	# It's up to user-defined code to convert given string to full image URL.
+	# Optional arguments can be specified after the URL.
+	#
+	# Examples:
+	#	!image.png
+	#	!https://example.org/image.png
+	#	!!image.png -alt "This is what I call an image!"
+	
+	BlockImage < ("!!"/"!") :Space* Arg (ImgAlt / ImgSize / ImgLink / ImgDark / ImgCenter / ImgLeft / ImgRight)*
+	ImgAlt <~ :"-alt " Arg
+	ImgSize < :"-size " Number :"x" Number
+	ImgLink <~ :"-link " Arg
+	ImgDark < "-dark"
+	ImgCenter < "-center"
+	ImgLeft < "-left"
+	ImgRight < "-right"
