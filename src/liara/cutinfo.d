@@ -1,6 +1,7 @@
 module liara.cutinfo;
 
 import pegged.grammar;
+import std.conv;
 
 /**
 	Information about cut block, collected with PEG's Semantic Actions.

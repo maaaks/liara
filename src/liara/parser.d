@@ -9,6 +9,7 @@ import std.array;
 import std.conv;
 import std.regex;
 import std.stdio;
+import std.string;
 import std.typecons;
 import std.typetuple;
 import std.xml;
