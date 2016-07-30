@@ -32,7 +32,7 @@ class TestParams: LiaraParams
 
 
 private void assertText(bool singleLineMode=false)(string rawTestInput,
-string testHtmlOutput, string testPlainOutput=null, OpeningType expectedOpeningType=OpeningType.Undefined) {
+string testHtmlOutput, string testPlainOutput=null) {
 	foreach (testInput; [rawTestInput, rawTestInput.replace("\n", "\r\n"), rawTestInput.replace("\n", "\r")]) {
 		// When testPlainOutput not given, that means nothing should be changed in the text
 		if (!testPlainOutput)
@@ -75,15 +75,6 @@ string testHtmlOutput, string testPlainOutput=null, OpeningType expectedOpeningT
 			writeln("       PLAIN: "~plainOutput);
 			writeln("WANTED PLAIN: "~testPlainOutput);
 			exit(0);
-		}
-		
-		try { assert(expectedOpeningType == OpeningType.Undefined || expectedOpeningType == result.openingType); }
-		catch(AssertError e) {
-			writeln("[FAIL] "~testInput);
-			writeln(result.tree);
-			writeln("      SOURCE: "~testInput.replace("\n","\\n"));
-			writeln("       OTYPE:", result.openingType);
-			writeln("WANTED OTYPE:", expectedOpeningType);
 		}
 	}
 	
@@ -237,28 +228,25 @@ unittest {
 	
 	// Block images
 	assertText("Before.\n\n!image.png\n\nAfter.",
-		"<p>Before.</p>\n\n<p class=\"blockimage\"><img alt=\"image.png\" src=\"https://example.org/image.png\"/></p>\n\n<p>After.</p>",
+		"<p>Before.</p>\n\n<p class=\"image\"><img alt=\"image.png\" src=\"https://example.org/image.png\"/></p>\n\n<p>After.</p>",
 		"Before.\n\nAfter.");
-	assertText(`!image.png`, `<p class="blockimage"><img alt="image.png" src="https://example.org/image.png"/></p>`,                                        "");
-	assertText(`!image.png -alt "Some alt text"`, `<p class="blockimage"><img alt="Some alt text" src="https://example.org/image.png"/></p>`,               "");
-	assertText(`!image.png -size 640x480`, `<p class="blockimage"><img alt="image.png" src="https://example.org/image.png" width="640" height="480"/></p>`, "");
-	assertText(`!!image.png`, `<p class="blockimage wide"><img alt="image.png" src="https://example.org/image.png"/></p>`,                                  "");
-	assertText(`!image.png -dark`, `<p class="blockimage"><img alt="image.png" src="https://example.org/image.png"/></p>`,                                  "");
-	assertText(`!!image.png -dark`, `<p class="blockimage wide"><img alt="image.png" src="https://example.org/image.png"/></p>`,                           "");
-	assertText(`!image.png -center`, `<p class="blockimage center"><img alt="image.png" src="https://example.org/image.png"/></p>`,                        "");
-	assertText(`!image.png -left`, `<p class="blockimage left"><img alt="image.png" src="https://example.org/image.png"/></p>`,                             "");
-	assertText(`!image.png -right`, `<p class="blockimage right"><img alt="image.png" src="https://example.org/image.png"/></p>`,                           "");
+	assertText(`!image.png`, `<p class="image"><img alt="image.png" src="https://example.org/image.png"/></p>`,                                        "");
+	assertText(`!image.png -alt "Some alt text"`, `<p class="image"><img alt="Some alt text" src="https://example.org/image.png"/></p>`,               "");
+	assertText(`!image.png -size 640x480`, `<p class="image"><img alt="image.png" src="https://example.org/image.png" width="640" height="480"/></p>`, "");
+	assertText(`!image.png -center`, `<p class="image center"><img alt="image.png" src="https://example.org/image.png"/></p>`,                        "");
+	assertText(`!image.png -left`, `<p class="image left"><img alt="image.png" src="https://example.org/image.png"/></p>`,                             "");
+	assertText(`!image.png -right`, `<p class="image right"><img alt="image.png" src="https://example.org/image.png"/></p>`,                           "");
 	assertText(`!image.png -link http://example.org/`,
-		`<p class="blockimage"><a href="http://example.org/"><img alt="image.png" src="https://example.org/image.png"/></a></p>`,                           "");
-	assertText(`!!"URL contains whitespace.jpg"`,
-		`<p class="blockimage wide"><img alt="URL contains whitespace.jpg" src="https://example.org/URL contains whitespace.jpg"/></p>`,                    "");
+		`<p class="image"><a href="http://example.org/"><img alt="image.png" src="https://example.org/image.png"/></a></p>`,                           "");
+	assertText(`!"URL contains whitespace.jpg"`,
+		`<p class="image"><img alt="URL contains whitespace.jpg" src="https://example.org/URL contains whitespace.jpg"/></p>`,                    "");
 	assertText(`!https://upload.wikimedia.org/wikipedia/en/d/da/D_programming_language_logo.png -alt "External image"`,
-		`<p class="blockimage"><img alt="External image" src="https://upload.wikimedia.org/wikipedia/en/d/da/D_programming_language_logo.png"/></p>`,       "");
+		`<p class="image"><img alt="External image" src="https://upload.wikimedia.org/wikipedia/en/d/da/D_programming_language_logo.png"/></p>`,       "");
 	// HTML
 	assertText(`!im<br>age.png`,
-		`<p class="blockimage"><img alt="im&lt;br&gt;age.png" src="https://example.org/im&lt;br&gt;age.png"/></p>`,                                         "");
+		`<p class="image"><img alt="im&lt;br&gt;age.png" src="https://example.org/im&lt;br&gt;age.png"/></p>`,                                         "");
 	assertText(`!image.png -alt "Some <b>alt</b> text"`,
-		`<p class="blockimage"><img alt="Some &lt;b&gt;alt&lt;/b&gt; text" src="https://example.org/image.png"/></p>`,                                      "");
+		`<p class="image"><img alt="Some &lt;b&gt;alt&lt;/b&gt; text" src="https://example.org/image.png"/></p>`,                                      "");
 	
 	// Custom blocks
 	assertText(`&Plugin_1`,                 `[[Plugin_1]]`, `[Plugin_1]`);
@@ -272,12 +260,4 @@ unittest {
 	assertLine(`[no]((text))[/no]`,       `((text))`,                       `((text))`);
 	assertLine(`[no][no]yes[/[/no]no]`,   `[no]yes[/no]`,                   `[no]yes[/no]`);
 	assertLine(`[no]<b>&times;</b>[/no]`, `&lt;b&gt;&amp;times;&lt;/b&gt;`, `<b>&times;</b>`);
-	
-	// Start with dark wide images
-	assertText("!!https://example.org/img.png -dark\n\nOne.\n\nTwo.\n\nThree.",
-		"<p class=\"blockimage wide\"><img alt=\"img.png\" src=\"https://example.org/img.png\"/></p>\n\n<p>One.</p>\n\n<p>Two.</p>\n\n<p>Three.</p>",
-		"One.\n\nTwo.\n\nThree.", OpeningType.DarkWideImage);
-	assertText("!!https://example.org/img.png -dark\n\nOne.\n\nTwo.\n\n(((CUT)))\n\nThree.",
-		"<p class=\"blockimage wide\"><img alt=\"img.png\" src=\"https://example.org/img.png\"/></p>\n\n<p>One.</p>\n\n<p>Two.</p>\n\n<div class=\"cut\">Читать дальше »</div>\n<div class=\"undercut\">\n\n<p>Three.</p>\n\n</div>",
-		"One.\n\nTwo.\n\nThree.", OpeningType.DarkWideImage);
 }

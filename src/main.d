@@ -84,7 +84,7 @@ int main(string[] args) {
 		else {
 			// Iterate all files in given directory and parse them
 			foreach (singleInput; dirEntries(input, SpanMode.depth)) {
-				if (!isFile(singleInput)) continue;
+				if (!isFile(singleInput.name)) continue;
 				
 				// Create corresponding subdirectory in the output directory
 				auto singleOutputRelative = relativePath(absolutePath(singleInput), absolutePath(input));

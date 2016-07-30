@@ -16,20 +16,10 @@ import std.xml;
 
 mixin(grammar(import("liara.peg")));
 
-/// Describes how a text starts.
-/// Can be used by higher-level app logic for choosing CSS classes for headings.
-enum OpeningType {
-	Normal,
-	WideImage,
-	DarkWideImage,
-	Undefined, /// For unittesting purposes only
-}
-
 /// Standard parsing result.
 class LiaraResult {
 	string htmlOutput;
 	string plainOutput;
-	OpeningType openingType;
 }
 
 /// Same as LiaraResult, but also includes ParseTree. For debugging purposes.
@@ -375,35 +365,20 @@ private string processNode(bool htmlMode)(ParseTree p, LiaraResult* r) {
 			}
 			
 		// Block image ("!image.png" or "!!image.png") is rendered as <p><img/></p>.
-		// When it opens the whole text, its parameters can affect parameters of the whole result:
-		// a wide image ("!!image.png") automatically sets r.openingType to OpensWithWideImage,
-		// and a wide dark image ("!!image.png -dark") sets it to OpensWithDarkWideImage.
-		// Also, the outer <p> tag, like any other <p>, gets class="last" when it closes the whole text.
 		case S!(Liara.BlockImage):
 			if (!htmlMode) {
 				return "";
 			}
 			else {
-				string attributes;                  /// The attributes for <img>
-				string[] pClasses = ["blockimage"]; /// List of classes to be used for <p> around the <img>
-				string link;                        /// Will be set to the image's link target
+				string attributes;             /// The attributes for <img>
+				string[] pClasses = ["image"]; /// List of classes to be used for <p> around the <img>
+				string link;                   /// Will be set to the image's link target
 				
 				// Use custom function to process the image URL
 				string src = parserParams.processImageUrl(p.matches[1]);
 				
 				// By default, set "alt" attribute to the image name
 				string alt = src.split("/")[$-1];
-				
-				// Set or don't set "last" class, depending on parameters
-				if (parserParams.addClassLast && p.begin == lastBlockBegin)
-					pClasses ~= "last";
-				
-				// Remember type of image embedding: fullscreen or not
-				if (p.matches[0] == "!!") {
-					pClasses ~= "wide";
-					if (isCurrentBlockFirst)
-						r.openingType = OpeningType.WideImage;
-				}
 				
 				// Now process optional arguments, one by one
 				for (auto i=1; i<p.children.length; i++) {
@@ -425,11 +400,6 @@ private string processNode(bool htmlMode)(ParseTree p, LiaraResult* r) {
 						case S!(Liara.ImgCenter): pClasses ~= "center"; break;
 						case S!(Liara.ImgLeft):   pClasses ~= "left";   break;
 						case S!(Liara.ImgRight):  pClasses ~= "right";  break;
-						
-						case S!(Liara.ImgDark):
-							if (isCurrentBlockFirst)
-								r.openingType = OpeningType.DarkWideImage;
-							break;
 					}
 				}
 				
@@ -440,7 +410,7 @@ private string processNode(bool htmlMode)(ParseTree p, LiaraResult* r) {
 				if (link)
 					result = "<a href=\""~encode(link)~"\">"~result~"</a>";
 				
-				// ...wrap it in <p class="blockimage"> (optionally with some additional classes) and return.
+				// ...wrap it in <p class="image"> (optionally with some additional classes) and return.
 				return "<p class=\""~uniq(pClasses).join(" ")~"\">"~result~"</p>\n\n";
 			}
 			

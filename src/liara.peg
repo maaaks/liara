@@ -164,8 +164,7 @@ Liara:
 	# Images
 	###################################################
 	
-	# Image URL should be placed on a separate line
-	# and prefixed with "!" (for normal mode) or "!!" (for «wide» mode).
+	# Image URL should be placed on a separate line and prefixed with "!".
 	# Since the URL can be relative (or even just a filename), no validation is done.
 	# It's up to user-defined code to convert given string to full image URL.
 	# Optional arguments can be specified after the URL.
@@ -173,13 +172,12 @@ Liara:
 	# Examples:
 	#	!image.png
 	#	!https://example.org/image.png
-	#	!!image.png -alt "This is what I call an image!"
+	#	!image.png -alt "This is what I call an image!"
 	
-	BlockImage < ("!!"/"!") :Space* Arg (ImgAlt / ImgSize / ImgLink / ImgDark / ImgCenter / ImgLeft / ImgRight)*
+	BlockImage < ("!!"/"!") :Space* Arg (ImgAlt / ImgSize / ImgLink / ImgCenter / ImgLeft / ImgRight)*
 	ImgAlt <~ :"-alt " Arg
 	ImgSize < :"-size " Number :"x" Number
 	ImgLink <~ :"-link " Arg
-	ImgDark < "-dark"
 	ImgCenter < "-center"
 	ImgLeft < "-left"
 	ImgRight < "-right"
