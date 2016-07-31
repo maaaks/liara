@@ -1,6 +1,6 @@
 module liara.params;
 
-import liara.parser;
+import liara;
 import std.xml;
 
 /// Simple class representing a HTML link.
