@@ -53,14 +53,7 @@ if (is(T : LiaraResult)) {
 	}
 	
 	// Reset counters, free memory
-	rt.allCuts = [];
-	rt.cutsStack = [];
-	rt.cutsJustOpened = [];
-	rt.cutsJustClosed = [];
-	rt.cutIndex = 0;
-	rt.numOfBlockquotesOpenedByLine = rt.numOfBlockquotesOpenedByLine.init;
-	rt.numOfBlockquotesClosedByLine = rt.numOfBlockquotesClosedByLine.init;
-	rt.quotationLevels = rt.quotationLevels.init;
+	rt = rt.init;
 	GC.collect();
 	
 	return result;
