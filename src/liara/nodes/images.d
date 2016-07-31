@@ -27,23 +27,23 @@ package string processNode_BlockImage(bool htmlMode)(ParseTree p) {
 		// Now process optional arguments, one by one
 		for (auto i=1; i<p.children.length; i++) {
 			ParseTree c = p.children[i];
-			final switch (c.name.replace(ctRegex!`^Liara\.`, ""))
+			final switch (c.name)
 			{
-				case S!(Liara.ImgAlt):
+				case "Liara.ImgAlt":
 					alt = c.matches[0];
 					break;
 				
-				case S!(Liara.ImgSize):
+				case "Liara.ImgSize":
 					attributes ~= " width=\""~c.matches[0]~"\" height=\""~c.matches[1]~"\"";
 					break;
 				
-				case S!(Liara.ImgLink):
+				case "Liara.ImgLink":
 					link = c.matches[0];
 					break;
 				
-				case S!(Liara.ImgCenter): pClasses ~= "center"; break;
-				case S!(Liara.ImgLeft):   pClasses ~= "left";   break;
-				case S!(Liara.ImgRight):  pClasses ~= "right";  break;
+				case "Liara.ImgCenter": pClasses ~= "center"; break;
+				case "Liara.ImgLeft":   pClasses ~= "left";   break;
+				case "Liara.ImgRight":  pClasses ~= "right";  break;
 			}
 		}
 		

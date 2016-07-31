@@ -16,12 +16,6 @@ public import liara.params;
 
 mixin(grammar(import("liara.peg")));
 
-// We use special compile-time function to convert symbols back to string,
-// so that instead of «case "Link"» we could write «case S!(Liara.Link)».
-// This is longer, but this allows to detect mistypes in cases.
-string S(alias symbol)() {
-	return __traits(identifier, symbol);
-}
 
 /// Standard parsing result.
 class LiaraResult {
