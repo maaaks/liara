@@ -10,7 +10,6 @@ import std.xml;
 
 
 package string processNode_Text(bool htmlMode)(ParseTree p) {
-	rt.isCurrentBlockFirst = true;
 	return parseAll!htmlMode(p.children);
 }
 
@@ -136,7 +135,6 @@ package string processNode_Block(bool htmlMode)(ParseTree p) {
 			: replicate("</blockquote>\n\n", rt.numOfBlockquotesClosedByLine.get(p.begin, 0));
 		
 		// Ready
-		rt.isCurrentBlockFirst = false;
 		return result;
 	}
 }

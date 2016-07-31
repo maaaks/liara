@@ -58,7 +58,6 @@ if (is(T : LiaraResult)) {
 	rt.cutsJustOpened = [];
 	rt.cutsJustClosed = [];
 	rt.cutIndex = 0;
-	rt.isCurrentBlockFirst = true;
 	rt.numOfBlockquotesOpenedByLine = rt.numOfBlockquotesOpenedByLine.init;
 	rt.numOfBlockquotesClosedByLine = rt.numOfBlockquotesClosedByLine.init;
 	rt.quotationLevels = rt.quotationLevels.init;
@@ -153,13 +152,10 @@ ParseTree prepare_Block(ParseTree)(ParseTree p) {
 		rt.numOfBlockquotesOpenedByLine[p.begin] = newLevel - oldLevel;
 	else if (newLevel < oldLevel)
 		rt.numOfBlockquotesClosedByLine[rt.lastBlockBegin] = oldLevel - newLevel;
+	
 	// Update the variables for use in future
 	rt.lastBlockBegin = p.begin;
 	rt.quotationLevels[p.begin] = newLevel;
-	
-	// 5. After any block, remember that further blocks can't influence on post's header
-	rt.isCurrentBlockFirst = false;
-	rt.lastBlockBegin = p.begin;
 	
 	return p;
 }

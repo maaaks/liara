@@ -41,9 +41,6 @@ struct LiaraRuntime
 	package CutInfo[] inlineCutsToClose;
 	package CutInfo[] blockCutsToClose;
 
-	/// True while processing first block
-	package bool isCurrentBlockFirst = true;
-
 	/// Index of beginning of latest opened block during first pass
 	package size_t lastBlockBegin;
 
