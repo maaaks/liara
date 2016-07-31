@@ -1,6 +1,7 @@
 module liara.nodes.links;
 
 import liara;
+import liara.params;
 import pegged.grammar;
 import std.xml;
 

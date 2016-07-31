@@ -2,6 +2,8 @@ module liara;
 
 import core.memory;
 import liara.nodes;
+import liara.params;
+import liara.runtime;
 import std.algorithm;
 import std.array;
 import std.conv;
@@ -12,7 +14,6 @@ import std.typecons;
 import std.typetuple;
 import std.xml;
 public import pegged.grammar;
-public import liara.params;
 
 mixin(grammar(import("liara.peg")));
 
@@ -27,71 +28,6 @@ class LiaraResult {
 class LiaraResultExtended: LiaraResult {
 	ParseTree tree;
 }
-
-
-/// Runtime parameters set by user when calling parser.
-package LiaraParams parserParams;
-
-
-// -----------------------------------------------------------
-//
-// Variables to serve cuts parsing.
-//
-// -----------------------------------------------------------
-
-/// All the cuts.
-package CutInfo[] allCuts;
-
-/// Temporary stack for cuts currently opened.
-/// It grows when a new cut is opened and decreases when it is closed.
-/// This stack is being used by Semantic Actions while building the ParseTree.
-package CutInfo[] cutsStack;
-
-/// Cuts indexed by position of its opening and closed tags.
-package CutInfo[size_t] cutsByBeginIndex;
-package CutInfo[size_t] cutsByEndIndex;
-
-/// Cuts counter.
-/// This is used in first pass for creating incremented IDs
-/// and for getting the cuts back in second pass.
-package ulong cutIndex;
-
-/// List of cuts that were opened and closed in current block.
-/// Appended each time we see a BeginCut/EndCut; read and flushed each time we finish a block.
-package CutInfo[] cutsJustOpened;
-package CutInfo[] cutsJustClosed;
-
-/// Lists of cuts needed to be opened/closed at the end of current block.
-/// Used in «case Paragraph» and «case Block».
-package CutInfo[] inlineCutsToOpen;
-package CutInfo[] blockCutsToOpen;
-package CutInfo[] inlineCutsToClose;
-package CutInfo[] blockCutsToClose;
-
-/// True while processing first block
-package bool isCurrentBlockFirst = true;
-
-/// Index of beginning of latest opened block during first pass
-package size_t lastBlockBegin;
-
-// -----------------------------------------------------------
-
-
-
-// -----------------------------------------------------------
-//
-// Variables to serve blockquotes parsing.
-//
-// -----------------------------------------------------------
-
-/// Quotation level of every block
-package size_t[size_t] quotationLevels;
-
-/// Numbers of blockquotes that should be opened/closed with the Line with given p.begin.
-package size_t[size_t] numOfBlockquotesOpenedByLine;
-package size_t[size_t] numOfBlockquotesClosedByLine;
-
-// -----------------------------------------------------------
 
 
 
@@ -117,15 +53,15 @@ if (is(T : LiaraResult)) {
 	}
 	
 	// Reset counters, free memory
-	allCuts = [];
-	cutsStack = [];
-	cutsJustOpened = [];
-	cutsJustClosed = [];
-	cutIndex = 0;
-	isCurrentBlockFirst = true;
-	numOfBlockquotesOpenedByLine = numOfBlockquotesOpenedByLine.init;
-	numOfBlockquotesClosedByLine = numOfBlockquotesClosedByLine.init;
-	quotationLevels = quotationLevels.init;
+	rt.allCuts = [];
+	rt.cutsStack = [];
+	rt.cutsJustOpened = [];
+	rt.cutsJustClosed = [];
+	rt.cutIndex = 0;
+	rt.isCurrentBlockFirst = true;
+	rt.numOfBlockquotesOpenedByLine = rt.numOfBlockquotesOpenedByLine.init;
+	rt.numOfBlockquotesClosedByLine = rt.numOfBlockquotesClosedByLine.init;
+	rt.quotationLevels = rt.quotationLevels.init;
 	GC.collect();
 	
 	return result;
@@ -154,27 +90,27 @@ ParseTree prepare_Block(ParseTree)(ParseTree p) {
 	
 	// 1. Update information about already existing cuts, newly opened cuts, closed cuts.
 	// (Fortunately, CutInfo.addBlock(p) will ignore duplicated calls with same blocks.)
-	foreach (CutInfo cut; cutsStack) {
+	foreach (CutInfo cut; rt.cutsStack) {
 		CuttedBlock block = cut.addBlock(p);
-		if (!cutsJustOpened.canFind(cut))
+		if (!rt.cutsJustOpened.canFind(cut))
 			block.fromTheBeginning = true;
-		if (!cutsJustClosed.canFind(cut))
+		if (!rt.cutsJustClosed.canFind(cut))
 			block.toTheEnd = true;
 	}
-	foreach (cut; cutsJustOpened) {
+	foreach (cut; rt.cutsJustOpened) {
 		CuttedBlock block = cut.addBlock(p);
-		if (!cutsJustClosed.canFind(cut))
+		if (!rt.cutsJustClosed.canFind(cut))
 			block.toTheEnd = true;
 	}
-	foreach (cut; cutsJustClosed) {
+	foreach (cut; rt.cutsJustClosed) {
 		CuttedBlock block = cut.addBlock(p);
-		if (!cutsJustOpened.canFind(cut))
+		if (!rt.cutsJustOpened.canFind(cut))
 			block.fromTheBeginning = true;
 	}
 	
 	// Clear the queues for future usage
-	cutsJustOpened = [];
-	cutsJustClosed = [];
+	rt.cutsJustOpened = [];
+	rt.cutsJustClosed = [];
 	
 	// 2. Check if the block starts with a BeginCut node.
 	// In fact, it may start with several cuts: «(((CUT))) (((CUT))) (((CUT))) Text...»,
@@ -183,7 +119,7 @@ ParseTree prepare_Block(ParseTree)(ParseTree p) {
 	foreach (node; p.children)
 		if (node.children.length && node.children[0].name == "Liara.BeginCut") {
 			ParseTree c = node.children[0];
-			cutsByBeginIndex[c.begin].addBlock(p).fromTheBeginning = true;
+			rt.cutsByBeginIndex[c.begin].addBlock(p).fromTheBeginning = true;
 		}
 		else
 			break; // There is no more cut beginnings here
@@ -196,8 +132,8 @@ ParseTree prepare_Block(ParseTree)(ParseTree p) {
 	foreach_reverse (node; p.children) {
 		if (node.children.length && node.children[0].name == "Liara.EndCut") {
 			ParseTree c = node.children[0];
-			if (c.end in cutsByEndIndex) { // if it's not an abandoned EndCut (without BeginCut)
-				cutsByEndIndex[c.end].addBlock(p).toTheEnd = true;
+			if (c.end in rt.cutsByEndIndex) { // if it's not an abandoned EndCut (without BeginCut)
+				rt.cutsByEndIndex[c.end].addBlock(p).toTheEnd = true;
 			}
 		}
 		else
@@ -209,21 +145,21 @@ ParseTree prepare_Block(ParseTree)(ParseTree p) {
 	// and compare with the current block's quotation level.
 	// If the current level is deeper, that means that current line opens some quotes.
 	// If the current level is less deep, that means that previous line closed some quotes.
-	size_t oldLevel = quotationLevels.get(lastBlockBegin, 0);
+	size_t oldLevel = rt.quotationLevels.get(rt.lastBlockBegin, 0);
 	size_t newLevel = (p.children.length && p.children[0].name == "zeroOrMore!(Liara.QuotationMark)")
 		? p.children[0].children.length
 		: 0;
 	if (newLevel > oldLevel)
-		numOfBlockquotesOpenedByLine[p.begin] = newLevel - oldLevel;
+		rt.numOfBlockquotesOpenedByLine[p.begin] = newLevel - oldLevel;
 	else if (newLevel < oldLevel)
-		numOfBlockquotesClosedByLine[lastBlockBegin] = oldLevel - newLevel;
+		rt.numOfBlockquotesClosedByLine[rt.lastBlockBegin] = oldLevel - newLevel;
 	// Update the variables for use in future
-	lastBlockBegin = p.begin;
-	quotationLevels[p.begin] = newLevel;
+	rt.lastBlockBegin = p.begin;
+	rt.quotationLevels[p.begin] = newLevel;
 	
 	// 5. After any block, remember that further blocks can't influence on post's header
-	isCurrentBlockFirst = false;
-	lastBlockBegin = p.begin;
+	rt.isCurrentBlockFirst = false;
+	rt.lastBlockBegin = p.begin;
 	
 	return p;
 }
@@ -234,15 +170,15 @@ ParseTree prepare_BeginCut(ParseTree)(ParseTree p) {
 	if (!p.successful) return p;
 	
 	//// Create new cut object
-	string id = "cut-"~(cutIndex++).to!string;
+	string id = "cut-"~(rt.cutIndex++).to!string;
 	string label = p.children.length>1 ? p.children[1].matches[0] : "Читать дальше »";
 	auto cut = new CutInfo(id, label);
 	
 	// Append the cut to arrays
-	allCuts ~= cut;                  // to be able to iterate through all the cuts
-	cutsStack ~= cut;                // to remember which cut should be closed in endCut()
-	cutsByBeginIndex[p.begin] = cut; // to remember which CutInfo was opened here
-	cutsJustOpened ~= cut;           // to add current block to cut.blocks
+	rt.allCuts ~= cut;                  // to be able to iterate through all the cuts
+	rt.cutsStack ~= cut;                // to remember which cut should be closed in endCut()
+	rt.cutsByBeginIndex[p.begin] = cut; // to remember which CutInfo was opened here
+	rt.cutsJustOpened ~= cut;           // to add current block to cut.blocks
 	
 	return p;
 }
@@ -253,11 +189,25 @@ ParseTree prepare_EndCut(ParseTree)(ParseTree p) {
 	if (!p.successful) return p;
 	
 	// Close latest opened cut
-	if (!cutsStack.empty) {
-		cutsByEndIndex[p.end] = cutsStack.back;
-		cutsJustClosed ~= cutsStack.back;
-		cutsStack.popBack();
+	if (!rt.cutsStack.empty) {
+		rt.cutsByEndIndex[p.end] = rt.cutsStack.back;
+		rt.cutsJustClosed ~= rt.cutsStack.back;
+		rt.cutsStack.popBack();
 	}
 	
 	return p;
+}
+
+
+/**
+	Exception to be thrown when an unknown plugin name is used.
+ */
+class UnsupportedPluginException: Exception
+{
+	immutable string pluginName;
+	
+	this(in string pluginName) {
+		this.pluginName = pluginName;
+		super("Unsupported plugin: "~pluginName);
+	}
 }

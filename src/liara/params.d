@@ -65,15 +65,5 @@ class LiaraParams
 	abstract string makeBlock(string pluginName, string input, bool addLast);
 }
 
-/**
-	Exception to be thrown when an unknown plugin name is used.
- */
-class UnsupportedPluginException: Exception
-{
-	immutable string pluginName;
-	
-	this(in string pluginName) {
-		this.pluginName = pluginName;
-		super("Unsupported plugin: "~pluginName);
-	}
-}
+
+package LiaraParams parserParams;

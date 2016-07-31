@@ -1,14 +1,16 @@
 module liara.nodes.text;
 
 import liara;
+import liara.params;
 import liara.nodes.cuts;
+import liara.runtime;
 import std.array;
 import std.string;
 import std.xml;
 
 
 package string processNode_Text(bool htmlMode)(ParseTree p) {
-	isCurrentBlockFirst = true;
+	rt.isCurrentBlockFirst = true;
 	return parseAll!htmlMode(p.children);
 }
 
@@ -21,11 +23,11 @@ package string processNode_Paragraph(bool htmlMode)(ParseTree p) {
 		return content ~ "\n\n";
 	}
 	else {
-		string result = (parserParams.addClassLast && p.begin == lastBlockBegin)
+		string result = (parserParams.addClassLast && p.begin == rt.lastBlockBegin)
 			? "<p class=\"last\">"
 			: "<p>";
 		
-		foreach (cut; allCuts) {
+		foreach (cut; rt.allCuts) {
 			CuttedBlock currBlock = cut.findBlock(p);
 			if (currBlock && currBlock.fromTheBeginning && !currBlock.toTheEnd) {
 				if (currBlock.begin == cut.blocks[0].begin)
@@ -38,7 +40,7 @@ package string processNode_Paragraph(bool htmlMode)(ParseTree p) {
 		
 		// Find if there are cuts that have been opened inside current block
 		// and should be closed with </span> here (while continued as <span> or <div> later)
-		foreach (cut; inlineCutsToClose)
+		foreach (cut; rt.inlineCutsToClose)
 			result ~= "</span>";
 		
 		result ~= "</p>\n\n";
@@ -73,23 +75,23 @@ package string processNode_Block(bool htmlMode)(ParseTree p) {
 	}
 	else {
 		string result;
-		inlineCutsToOpen = [];
-		blockCutsToOpen = [];
-		inlineCutsToClose = [];
-		blockCutsToClose = [];
+		rt.inlineCutsToOpen = [];
+		rt.blockCutsToOpen = [];
+		rt.inlineCutsToClose = [];
+		rt.blockCutsToClose = [];
 		
 		// Open blockquote, if needed
-		result ~= replicate("<blockquote>\n\n", numOfBlockquotesOpenedByLine.get(p.begin, size_t.init));
+		result ~= replicate("<blockquote>\n\n", rt.numOfBlockquotesOpenedByLine.get(p.begin, size_t.init));
 		
 		// Find out which cuts should be opened or closed at the block's margins.
-		foreach (cut; allCuts) {
+		foreach (cut; rt.allCuts) {
 			if (cut.blocks[0].begin == p.begin && cut.firstBlockIsFull)
 				// Current block is the first block inside a block cut.
-				blockCutsToOpen ~= cut;
+				rt.blockCutsToOpen ~= cut;
 				
 			if (cut.blocks[$-1].end == p.end && cut.lastBlockIsFull)
 				// Current block is the last block inside a block cut.
-				blockCutsToClose ~= cut;
+				rt.blockCutsToClose ~= cut;
 				
 			if (cut.blocks.length >= 2) {
 				// Cut that contain two or more blocks sometimes can be divided into two or three parts.
@@ -98,24 +100,24 @@ package string processNode_Block(bool htmlMode)(ParseTree p) {
 				
 				if (cut.blocks[0].begin == p.begin && !cut.blocks[0].fromTheBeginning)
 					// This is the first block, and it is <span>.
-					inlineCutsToClose ~= cut;
+					rt.inlineCutsToClose ~= cut;
 					
 				if (cut.blocks[1].begin == p.begin && !cut.blocks[0].fromTheBeginning && cut.blocks[1].toTheEnd)
 					// This is the second block in the cut, but the first one inside its <div> part.
-					blockCutsToOpen ~= cut;
+					rt.blockCutsToOpen ~= cut;
 					
 				if (cut.blocks[$-2].end == p.end && cut.blocks[$-2].fromTheBeginning && !cut.blocks[$-1].toTheEnd)
 					// This is the second last block in the cut, but the last one inside its <div> part.
-					blockCutsToClose ~= cut;
+					rt.blockCutsToClose ~= cut;
 					
 				if (cut.blocks[$-1].end == p.end && !cut.blocks[$-1].toTheEnd)
 					// This is the last block, and it is <span>.
-					inlineCutsToOpen ~= cut;
+					rt.inlineCutsToOpen ~= cut;
 			}
 		}
 		
 		// Check if the block begins with one or more cut openings.
-		foreach (cut; blockCutsToOpen)
+		foreach (cut; rt.blockCutsToOpen)
 			if (cut.blocks[0].begin == p.begin)
 				result ~= "<div class=\"cut\">"~encode(cut.label)~"</div>\n<div class=\"undercut\">\n\n";
 			else
@@ -125,16 +127,16 @@ package string processNode_Block(bool htmlMode)(ParseTree p) {
 		result ~= parseAll!htmlMode(p.children);
 		
 		// Finally, check if the block ends with one or more cut endings.
-		foreach (cut; blockCutsToClose)
+		foreach (cut; rt.blockCutsToClose)
 			result ~= "</div>\n\n";
 			
 		// Close blockquote, if needed
-		result ~= (p.begin == lastBlockBegin)
-			? replicate("</blockquote>\n\n", quotationLevels[p.begin])
-			: replicate("</blockquote>\n\n", numOfBlockquotesClosedByLine.get(p.begin, 0));
+		result ~= (p.begin == rt.lastBlockBegin)
+			? replicate("</blockquote>\n\n", rt.quotationLevels[p.begin])
+			: replicate("</blockquote>\n\n", rt.numOfBlockquotesClosedByLine.get(p.begin, 0));
 		
 		// Ready
-		isCurrentBlockFirst = false;
+		rt.isCurrentBlockFirst = false;
 		return result;
 	}
 }

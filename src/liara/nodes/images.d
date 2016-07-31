@@ -1,6 +1,7 @@
 module liara.nodes.images;
 
 import liara;
+import liara.params;
 import pegged.grammar;
 import std.algorithm.iteration;
 import std.array;
