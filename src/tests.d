@@ -21,7 +21,7 @@ class TestParams: LiaraParams
 		return new Link(target, label);
 	}
 	
-	override string makeBlock(string pluginName, string input, bool addLast, LiaraResult* r) {
+	override string makeBlock(string pluginName, string input, bool addLast) {
 		return "[["~pluginName~"]]";
 	}
 	

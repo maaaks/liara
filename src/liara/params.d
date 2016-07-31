@@ -62,7 +62,7 @@ class LiaraParams
 		When the block is the whole text's last block, addLast argument will be set to true.
 		It can be used to add some special CSS classes to such blocks.
 	 */
-	abstract string makeBlock(string pluginName, string input, bool addLast, LiaraResult* r);
+	abstract string makeBlock(string pluginName, string input, bool addLast);
 }
 
 /**
