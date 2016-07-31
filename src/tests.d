@@ -1,7 +1,7 @@
 import core.exception;
 import core.stdc.stdlib;
+import liara;
 import liara.params;
-import liara.parser;
 import pegged.grammar;
 import std.array;
 import std.regex;
@@ -21,7 +21,7 @@ class TestParams: LiaraParams
 		return new Link(target, label);
 	}
 	
-	override string makeBlock(string pluginName, string input, bool addLast, LiaraResult* r) {
+	override string makeBlock(string pluginName, string input, bool addLast) {
 		return "[["~pluginName~"]]";
 	}
 	

@@ -1,7 +1,11 @@
-module liara.cutinfo;
+module liara.nodes.cuts;
 
-import pegged.grammar;
+import liara;
+import liara.runtime;
+import std.algorithm.searching;
 import std.conv;
+import std.xml;
+
 
 /**
 	Information about cut block, collected with PEG's Semantic Actions.
@@ -60,4 +64,27 @@ class CuttedBlock
 	override string toString() const {
 		return "["~begin.to!string~":"~end.to!string~"], "~fromTheBeginning.to!string~", "~toTheEnd.to!string;
 	}
+}
+
+
+package string processNode_BeginCut(bool htmlMode)(ParseTree p) {
+	// We only render openings of inline cuts here.
+	// Endings of inline cuts are rendered in "Liara.Block".
+	CutInfo cut = rt.cutsByBeginIndex[p.begin];
+	if (htmlMode && !cut.firstBlockIsFull && !rt.inlineCutsToOpen.canFind(cut))
+		return "<span class=\"cut\">"~encode(cut.label)~"</span><span class=\"undercut\">";
+	else
+		return "";
+}
+
+
+package string processNode_EndCut(bool htmlMode)(ParseTree p) {
+	// We only render endings of inline cuts here.
+	// Endings of block cuts are rendered in "Liara.Block".
+	if (htmlMode && p.end in rt.cutsByEndIndex) {
+		CutInfo cut = rt.cutsByEndIndex[p.end];
+		if (!rt.blockCutsToClose.canFind(cut))
+			return "</span>";
+	}
+	return "";
 }

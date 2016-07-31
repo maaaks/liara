@@ -1,6 +1,6 @@
 module liara.params;
 
-import liara.parser;
+import liara;
 import std.xml;
 
 /// Simple class representing a HTML link.
@@ -62,18 +62,8 @@ class LiaraParams
 		When the block is the whole text's last block, addLast argument will be set to true.
 		It can be used to add some special CSS classes to such blocks.
 	 */
-	abstract string makeBlock(string pluginName, string input, bool addLast, LiaraResult* r);
+	abstract string makeBlock(string pluginName, string input, bool addLast);
 }
 
-/**
-	Exception to be thrown when an unknown plugin name is used.
- */
-class UnsupportedPluginException: Exception
-{
-	immutable string pluginName;
-	
-	this(in string pluginName) {
-		this.pluginName = pluginName;
-		super("Unsupported plugin: "~pluginName);
-	}
-}
+
+package LiaraParams parserParams;
