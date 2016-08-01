@@ -1,0 +1,5 @@
+.dub/
+__*
+dub.*.json
+*.swp
+
