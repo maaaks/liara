@@ -70,7 +70,7 @@ Liara:
 	#	((mypost1 Link to my old post))
 	
 	Link <- :"((" LinkTarget (:Space+ LinkLabel)? :"))"
-	LinkTarget <~ (!"))" !Space .)*
+	LinkTarget <~ (!"))"!"(" !Space .)*
 	LinkLabel <- (!"))" (Bold / Italic / Code / Del / PlainChar))+
 	
 	

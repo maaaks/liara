@@ -115,6 +115,9 @@ unittest {
 		`<a href="https://maaaks.ru/"><strong>Formatting</strong> inside link</a>.`, `Formatting inside link.`);
 	assertLine(`**((https://maaaks.ru/ Link)) inside formatting.**`,
 		`<strong><a href="https://maaaks.ru/">Link</a> inside formatting.</strong>`, `Link inside formatting.`);
+	// Embraced links
+	assertLine(`Test it (((http://www.gnu.org/philosophy/free-sw.html)))`, `Test it (<a href="http://www.gnu.org/philosophy/free-sw.html">http://www.gnu.org/philosophy/free-sw.html</a>)`, `Test it (http://www.gnu.org/philosophy/free-sw.html)`);
+	assertLine(`Test it (((http://www.gnu.org/philosophy/free-sw.html Freedom 1)))`, `Test it (<a href="http://www.gnu.org/philosophy/free-sw.html">Freedom 1</a>)`, `Test it (Freedom 1)`);
 	// HTML
 	assertLine(`((https://<b>maaaks.ru</b>/))`,
 		`<a href="https://&lt;b&gt;maaaks.ru&lt;/b&gt;/">https://&lt;b&gt;maaaks.ru&lt;/b&gt;/</a>`, `https://<b>maaaks.ru</b>/`);
